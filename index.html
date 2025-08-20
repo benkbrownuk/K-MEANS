@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>K-Means Clustering Visualizer</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f9f9f9; }
+    #controls { margin: 20px 0; }
+    canvas { background: #fff; border: 1px solid #ccc; margin-top: 10px; }
+    button, select { margin: 0 5px; padding: 5px 10px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>K-Means Clustering Visualizer</h2>
+  <div id="controls">
+    <label for="k">Number of clusters (k):</label>
+    <select id="k">
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+    </select>
+    <button id="assign">Assign Points</button>
+    <button id="move">Move Centroids</button>
+    <button id="reset">Reset</button>
+  </div>
+  <canvas id="canvas" width="600" height="400"></canvas>
+  <script>
+    // --- Parameters ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const kSelect = document.getElementById('k');
+    const assignBtn = document.getElementById('assign');
+    const moveBtn = document.getElementById('move');
+    const resetBtn = document.getElementById('reset');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+    const POINT_RADIUS = 6;
+    const CENTROID_RADIUS = 10;
+    const COLORS = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33'];
+    let points = [];
+    let centroids = [];
+    let assignments = [];
+    let k = parseInt(kSelect.value);
+
+    // --- Utility Functions ---
+    function randomPoint() {
+      return {
+        x: Math.random() * (WIDTH - 40) + 20,
+        y: Math.random() * (HEIGHT - 40) + 20
+      };
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    // --- Drawing Functions ---
+    function draw() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+      // Draw lines from points to centroids
+      if (assignments.length === points.length) {
+        for (let i = 0; i < points.length; i++) {
+          const c = centroids[assignments[i]];
+          ctx.strokeStyle = COLORS[assignments[i]];
+          ctx.beginPath();
+          ctx.moveTo(points[i].x, points[i].y);
+          ctx.lineTo(c.x, c.y);
+          ctx.stroke();
+        }
+      }
+      // Draw points
+      for (let i = 0; i < points.length; i++) {
+        ctx.fillStyle = assignments.length === points.length ? COLORS[assignments[i]] : '#333';
+        ctx.beginPath();
+        ctx.arc(points[i].x, points[i].y, POINT_RADIUS, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+      }
+      // Draw centroids
+      for (let i = 0; i < centroids.length; i++) {
+        ctx.fillStyle = COLORS[i];
+        ctx.beginPath();
+        ctx.arc(centroids[i].x, centroids[i].y, CENTROID_RADIUS, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.stroke();
+      }
+    }
+
+    // --- K-Means Steps ---
+    function assignPoints() {
+      assignments = points.map(p => {
+        let minDist = Infinity, idx = 0;
+        for (let i = 0; i < centroids.length; i++) {
+          let d = distance(p, centroids[i]);
+          if (d < minDist) { minDist = d; idx = i; }
+        }
+        return idx;
+      });
+      draw();
+    }
+
+    function moveCentroids() {
+      let sums = Array(k).fill().map(() => ({x:0, y:0, count:0}));
+      for (let i = 0; i < points.length; i++) {
+        let idx = assignments[i];
+        sums[idx].x += points[i].x;
+        sums[idx].y += points[i].y;
+        sums[idx].count++;
+      }
+      for (let i = 0; i < k; i++) {
+        if (sums[i].count > 0) {
+          centroids[i].x = sums[i].x / sums[i].count;
+          centroids[i].y = sums[i].y / sums[i].count;
+        }
+      }
+      draw();
+    }
+
+    function reset() {
+      points = Array(30).fill().map(randomPoint);
+      k = parseInt(kSelect.value);
+      centroids = Array(k).fill().map(randomPoint);
+      assignments = [];
+      draw();
+    }
+
+    // --- Event Listeners ---
+    kSelect.onchange = reset;
+    assignBtn.onclick = assignPoints;
+    moveBtn.onclick = moveCentroids;
+    resetBtn.onclick = reset;
+
+    // --- Initial Draw ---
+    reset();
+  </script>
+</body>
+</html>
